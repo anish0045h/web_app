@@ -17,7 +17,7 @@ st.title("🌊 Underwater Trash Detection App")
 # Load YOLO model
 @st.cache_resource
 def load_model():
-    model_path = r"C:/Users/anish/Downloads/yolo_trained_model/content/runs/detect/train/weights/best.pt"
+    model_path = "best.pt" # this is the modifyed file path according to the github
     return YOLO(model_path)
 
 with st.spinner("Loading model..."):
