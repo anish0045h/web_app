@@ -15,7 +15,7 @@ st.set_page_config(page_title="Underwater Trash Detector", layout="wide")
 st.title("🌊 Underwater Trash Detection App")
 
 # Load YOLO model
-@st.cache_resource
+#@st.cache_resource
 def load_model():
     model_path = "best.pt" # this is the modifyed file path according to the github
     return YOLO(model_path)
