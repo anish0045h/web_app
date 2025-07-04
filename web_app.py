@@ -131,7 +131,7 @@ st.title("🌊 Underwater Trash Detection App")
 # ✅ CACHED MODEL LOADER
 @st.cache_resource
 def load_model():
-    model_path = "underwater_model.pt"  # or best.pt if still named like that
+    model_path = "best.pt"  # this is my model name 
     abs_path = os.path.abspath(model_path)
     print(f"🚀 Loading YOLO model from: {abs_path}")
 
