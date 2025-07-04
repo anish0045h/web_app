@@ -16,12 +16,19 @@ st.title("🌊 Underwater Trash Detection App")
 
 # Load YOLO model
 #@st.cache_resource
-def load_model():
-    model_path = "best.pt" # this is the modifyed file path according to the github
+def load_model_fresh():
+    model_path = "best.pt"  # or "models/best.pt" if your file is in a folder
+    abs_path = os.path.abspath(model_path)
+    print(f"🚀 Loading YOLO model from: {abs_path}")  # Debug log
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"❌ Model file not found at {abs_path}")
+
     return YOLO(model_path)
 
+# Use the renamed loader (bypasses old cached version)
 with st.spinner("Loading model..."):
-    model = load_model()
+    model = load_model_fresh()
 st.success("Model loaded successfully!")
 
 # Image prediction with resizing
