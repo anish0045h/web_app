@@ -7,7 +7,6 @@ import tempfile
 import logging
 import os
 
-
 # Suppress Streamlit context warning
 logging.getLogger("streamlit.runtime.scriptrunner.script_run_context").setLevel(logging.ERROR)
 
@@ -20,9 +19,12 @@ st.title("🌊 Underwater Trash Detection")
 # -----------------------------
 @st.cache_resource
 def load_model():
-    # CHANGE THIS PATH IF NEEDED
-    # ✅ THIS WORKS (Assuming best.pt is in the same folder as web_app.py)
-    model_path = "best.pt"
+    # 🔴 FIX 1: Use a relative path. 
+    # Ensure 'best.pt' is in the SAME folder as this python file on GitHub.
+    model_path = "best.pt" 
+    
+    # If you have it in a subfolder named 'weights', use: "weights/best.pt"
+    
     if not os.path.isfile(model_path):
         st.error(f"Model file not found: {model_path}")
         raise FileNotFoundError(model_path)
@@ -52,7 +54,6 @@ def make_prediction(img: Image.Image):
         st.error(f"Prediction error: {e}")
         raise
 
-    # results[0].plot() returns an annotated image (BGR for Ultralytics/OpenCV)
     annotated = results[0].plot()
     if annotated is None:
         st.error("No annotated image returned by model.plot()")
@@ -91,7 +92,7 @@ def process_video(video_path: str) -> str:
     temp_path = temp_file.name
     temp_file.close()
 
-    # Codec (mp4v often works with HTML5 players)
+    # Codec
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(temp_path, fourcc, fps, (width, height))
 
@@ -109,20 +110,17 @@ def process_video(video_path: str) -> str:
 
         try:
             results = model.predict(frame, conf=0.40)
-
         except Exception as e:
             st.error(f"Video prediction error: {e}")
             break
 
-        annotated = results[0].plot()  # annotated frame (BGR)
+        annotated = results[0].plot()
         if annotated is None:
             continue
 
-        # Ensure correct size
         if (annotated.shape[1], annotated.shape[0]) != (width, height):
             annotated = cv2.resize(annotated, (width, height))
 
-        # Ensure uint8
         annotated_bgr = annotated.astype("uint8")
         out.write(annotated_bgr)
         frame_count += 1
@@ -142,41 +140,47 @@ def process_video(video_path: str) -> str:
 def stream_video(video_path: str):
     """
     Streams video with YOLO detections frame-by-frame to the UI.
+    Includes optimization (skipping frames + resizing) to prevent lag.
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         st.error("Cannot open uploaded video")
         return
 
-    stframe = st.empty()  # placeholder to show frames
+    stframe = st.empty()
+    frame_count = 0  # Counter for skipping frames
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
+        frame_count += 1
+
+        # 🔴 FIX 2: Frame Skipping
+        # Only process every 3rd frame (skip 2 frames)
+        if frame_count % 3 != 0:
+            continue
+
+        # 🔴 FIX 3: Resize before processing
+        # Reducing size to 640px width makes YOLO much faster on CPU
+        frame = cv2.resize(frame, (640, 360))
+
         try:
             results = model.predict(frame, conf=0.40)
-
         except Exception as e:
             st.error(f"Video prediction error: {e}")
             break
 
-        annotated = results[0].plot()  # annotated frame (BGR)
+        annotated = results[0].plot()
         if annotated is None:
             continue
 
-        # Resize for display
-        fixed_width = 700
-        h, w = annotated.shape[:2]
-        sf = fixed_width / w
-        resized = cv2.resize(annotated, (fixed_width, int(h * sf)))
-
         # Convert BGR -> RGB for Streamlit
-        frame_rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        frame_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
 
-        stframe.image(frame_rgb, channels="RGB", use_container_width=False
-)
+        # Update the placeholder
+        stframe.image(frame_rgb, channels="RGB", use_container_width=True)
 
     cap.release()
 
@@ -203,13 +207,12 @@ if file_type == "Image":
         resized_input = cv2.resize(img_cv, new_size)
         resized_input_rgb = cv2.cvtColor(resized_input, cv2.COLOR_BGR2RGB)
 
-        st.image(resized_input_rgb, caption="📷 Uploaded Image", use_column_width=False)
+        st.image(resized_input_rgb, caption="📷 Uploaded Image", use_container_width=False)
 
         with st.spinner("🔍 Detecting..."):
             result_img = make_prediction(image)
 
-        # result_img is BGR
-        st.image(result_img, caption="✅ Detected Image", channels="BGR", use_column_width=False)
+        st.image(result_img, caption="✅ Detected Image", channels="BGR", use_container_width=False)
         st.success("Detection complete!")
 
 # -----------------------------
@@ -229,13 +232,13 @@ elif file_type == "Video":
         )
 
         if mode == "Live detection (frame-by-frame)":
-            st.info("🎥 Running live detection. Please wait for the video to finish processing.")
-            with st.spinner("🔍 Processing video frames..."):
-                stream_video(video_path)
+            st.info("🎥 Running live detection... (Optimized for performance)")
+            stream_video(video_path)
             st.success("✅ Video processing complete!")
 
         else:  # Generate processed video file
-            with st.spinner("🔍 Processing video and generating output file..."):
+            st.info("⏳ Processing full video... This may take a while.")
+            with st.spinner("Processing video frames..."):
                 output_path = process_video(video_path)
 
             st.video(output_path)
