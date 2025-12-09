@@ -21,7 +21,8 @@ st.title("🌊 Underwater Trash Detection")
 @st.cache_resource
 def load_model():
     # CHANGE THIS PATH IF NEEDED
-    model_path = r"C:\Users\anish\OneDrive\Desktop\projects\trash_dataset\yolo_trained_model\content\runs\detect\train\weights\best.pt"
+    # ✅ THIS WORKS (Assuming best.pt is in the same folder as web_app.py)
+    model_path = "best.pt"
     if not os.path.isfile(model_path):
         st.error(f"Model file not found: {model_path}")
         raise FileNotFoundError(model_path)
